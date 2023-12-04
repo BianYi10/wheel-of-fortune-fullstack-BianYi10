@@ -8,6 +8,7 @@ import HistoryScoreWindow from './HistoryScoreWindow';
 import axios from 'axios';
 
 function App() {
+  // Various state hooks for managing game and user data
   const phrase = "Have a great day";
   const [hiddenPhrase, setHiddenPhrase] = useState('');
   const [inputLetter, setInputLetter] = useState('');
@@ -22,76 +23,64 @@ function App() {
   const [inputUserName, setInputUserName] = useState('');
   const [userName, setUserName] = useState('');
   const [score, setScore] = useState(0);
+  const [first, setFirst] = useState(false);
 
+  // Handles user login and sets the initial state
   function handleLogin(user){
       setUser(user);
+      setFirst(true);
   }
 
+  // Fetches user information by their Google ID
   function findUserInfoByGoogleId() {
     const url = `https://wheeloffortune-68830.ue.r.appspot.com/api/UserInfo/findUserInfoByGoogleId?googleId=${user.uid}`;
-    console.log(url);
     axios.get(url)
       .then(response => {
-        console.log("response.data=",response.data);
         setUserInfo(response.data);
       })
       .catch(error => {
-        console.log("error.message= ",error.message);
         setShowUserName(true);
         setShowGame(false);
-        console.log("error");
       });
   };
 
+  // Handles submission of the user name
   function handleUserNameSubmit(event) {
     event.preventDefault();
-    console.log("user.uid is ",user.uid);
-    console.log("inputUserName is ",inputUserName);
     const postData = {
-        googleId:user.uid,
-        userName:inputUserName
+        googleId: user.uid,
+        userName: inputUserName
     };
     try {
       const response = axios.post('https://wheeloffortune-68830.ue.r.appspot.com/api/UserInfo/saveUserInfo', postData);
-      console.log('Response:', response.data);
-      setShowUserName(false);
-      setShowGame(true);
     } catch (error) {
       console.error('Error posting data:', error);
     }
   };
 
+  // Handles changes to the letter input
   const handleInputChange = (event) => {
     setInputLetter(event.target.value);
   };
 
+  // Returns the current formatted time
   const getCurrentFormattedTime = () => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以加1
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-  
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
   };
 
+  // Handles saving the game score
   function handleSaveStore(event) {
     event.preventDefault();
     const currentTime = getCurrentFormattedTime();
-    console.log("user.uid is ",user.uid);
-    console.log("date is",currentTime);
-    console.log("score is ",score);
     const postData = {
-        googleId:user.uid,
-        date:currentTime,
+        googleId: user.uid,
+        date: currentTime,
         score
     };
 
     axios.post('https://wheeloffortune-68830.ue.r.appspot.com/api/GameRecords/saveGameRecord', postData)
     .then(response => {
-      console.log("response.data=",response.data);
       if (response.data === 'success') {
         console.log("Success!");
       } else {
@@ -99,31 +88,32 @@ function App() {
       }
     })
     .catch(error => {
-      console.log("error.message= ",error.message);
+      console.error("Error:", error.message);
     });
     
     setScore(0);
     setShowScore(false);
   }
 
+  // Handles canceling the score storing process
   function handleCancelStore(event) {
     event.preventDefault();
     setScore(0);
     setShowScore(false);
   }
+
+  // Triggers the username change interface
   function handleChangeUserName(event) {
     event.preventDefault();
     setShowChangeUserName(true);
   }
 
+  // Submits the new user name
   function handleChangeUserNameSubmit(event) {
     event.preventDefault();
-    console.log("user.uid is ",user.uid);
-    console.log("inputUserName is ",inputUserName);
     try {
       const url=`https://wheeloffortune-68830.ue.r.appspot.com/api/UserInfo/updateUserName?googleId=${user.uid}&userName=${inputUserName}`
       const response = axios.post(url);
-      console.log('Response:', response.data);
       setShowChangeUserName(false);
       setUserName(inputUserName);
     } catch (error) {
@@ -131,83 +121,86 @@ function App() {
     }
   }
 
-
+  // Decrypts the given string based on the user's guess
   const decryptString = () => {
     const isCorrectGuess = phrase.toLowerCase().includes(inputLetter.toLowerCase());
     if (isCorrectGuess) {
       const updatedHiddenPhrase = Array.from(hiddenPhrase); // Update displayed phrase
       phrase.split('').forEach((char, index) => {
-        if (char.toLowerCase() === inputLetter.toLowerCase()) { // ==(ignore the type)  ===(compare the type)
+      if (char.toLowerCase() === inputLetter.toLowerCase()) {
           updatedHiddenPhrase[index] = char;
-        }
+      }
       });
 
       setHiddenPhrase(updatedHiddenPhrase.join(''));
 
       if (!updatedHiddenPhrase.includes('*')) {
-        setCorrectGuess(true);
+       setCorrectGuess(true);
       }
     }
     else{
-      setChanceLeft(chanceLeft-1);
+    setChanceLeft(chanceLeft-1);
     }
   };
 
-
+  // Handles the guess action and updates the game state accordingly
   const handleGuess = () => {
     if(chanceLeft<=0||correctGuess){
-      const tmpPhrase= phrase.replace(/[a-zA-Z]/g, '*');// regular expression
+      const tmpPhrase = phrase.replace(/[a-zA-Z]/g, '*'); // Regular expression to hide letters
       setHiddenPhrase(tmpPhrase);
       setChanceLeft(5);
       setCorrectGuess(false);
     }
     else{
-      console.log(hiddenPhrase);
-      console.log(phrase);
-      console.log(inputLetter);
       decryptString();
-      console.log(hiddenPhrase);
     }
     setInputLetter('');
   };
 
+  // Effect hook to initialize the hidden phrase when the component mounts
   useEffect(() => {
-    // 在组件挂载时将 phrase 变为 hiddenPhrase
-    const tmpPhrase= phrase.replace(/[a-zA-Z]/g, '*');
+    const tmpPhrase = phrase.replace(/[a-zA-Z]/g, '*'); // Replaces all letters with asterisks
     setHiddenPhrase(tmpPhrase);
-  }, []); // 空数组表示只在组件挂载时执行一次
+  }, []); // Empty dependency array ensures this effect runs only once on mount
+  
+  // Effect hook to fetch user information when the user state updates
   useEffect(() => {
     if (user) {
-      console.log("查询是否有userName");
       findUserInfoByGoogleId();
     }
-  }, [user]); // 依赖列表中包含 user，表示 user 更新时执行
+  }, [user]); // Dependency array includes user, so this effect runs whenever user changes
+  
+  // Effect hook to manage the score display based on the game state
   useEffect(() => {
     if (chanceLeft <= 0 || correctGuess) {
-      setScore(chanceLeft);
-      setShowScore(true);
-      console.log("setScore");
+        setScore(chanceLeft);
+        setShowScore(true);
     }
-  }, [chanceLeft, correctGuess]);
-  useEffect(() => {
-    console.log("userInfo"); // 当 userInfo 更新后，这里会被执行
-    if (userInfo && Array.isArray(userInfo) && userInfo.length === 0) {
-      setShowUserName(true);
-      setShowGame(false);
-    } else {
-      setShowUserName(false);
-      setShowGame(true);
-      setUserName(userInfo.map(item => item.userName));
-      console.log("userInfo.map(item => item.userName)= ",userInfo.map(item => item.userName));
-    }
-  }, [userInfo]);
+  }, [chanceLeft, correctGuess]); // Dependency array includes chanceLeft and correctGuess
 
+  // Effect hook to show/hide the username input based on user info
+  useEffect(() => {
+    if(first){
+      if (userInfo && Array.isArray(userInfo) && userInfo.length === 0) {
+        setShowUserName(true);
+        setShowGame(false);
+      } else {
+        setShowUserName(false);
+        setShowGame(true);
+        setUserName(userInfo.map(item => item.userName));
+      }
+    }
+  }, [userInfo]); // Dependency array includes userInfo, so this effect runs whenever userInfo changes
+
+  // State hook for managing the visibility of the history score window
   const [showHistoryScoreWindow, setShowHistoryScoreWindow] = useState(false);
 
+  // Toggles the visibility of the history score window
   const handleShowHistoryScoreWindow = () => {
     setShowHistoryScoreWindow(!showHistoryScoreWindow);
   };
-  
+
+  // Main component return function with conditional rendering based on state
   return (
     <div className="App">
       <LoginForm LoginEvent={handleLogin}/>
@@ -259,8 +252,8 @@ function App() {
         {correctGuess && <p>Congratulations! You Win!</p>}
         <button onClick={handleGuess}>Guess</button>
         <button onClick={handleShowHistoryScoreWindow}>
-                {showHistoryScoreWindow ? 'Hide History Score Window' : 'Show History Score Window'}
-            </button>
+          {showHistoryScoreWindow ? 'Hide History Score Window' : 'Show History Score Window'}
+          </button>
         {showHistoryScoreWindow && <HistoryScoreWindow googleId={user.uid}/>}
       </header>
       </>
